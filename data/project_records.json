@@ -1,0 +1,88 @@
+{
+  "projects": [
+    {
+      "id": "project-01",
+      "dropdown_label": "Project Placeholder #1 (Location A)",
+      "title": "Project Name Placeholder #1",
+      "organisation": "Organisation Name Placeholder",
+      "verification_status": "Verified Record",
+      "coordinates": [-20.25, 57.55],
+      "zoom_level": 13,
+      "boundary_polygon": [
+        [-20.248, 57.548],
+        [-20.248, 57.552],
+        [-20.252, 57.552],
+        [-20.252, 57.548]
+      ],
+      "start_date": "YYYY-MM",
+      "description": "Generic project description placeholder. Community actions and environmental objectives will be documented here.",
+      "analysis_file": "data/analysis_project_01.json",
+      "community_evidence": [
+        {
+          "title": "Evidence Item #1",
+          "type": "Field Photo",
+          "status": "VERIFIED",
+          "image_url": "assets/placeholder-photo-1.jpg",
+          "date": "YYYY-MM-DD",
+          "notes": "GPS metadata and timestamp verified."
+        },
+        {
+          "title": "Evidence Item #2",
+          "type": "Growth Log",
+          "status": "VERIFIED",
+          "image_url": "assets/placeholder-photo-2.jpg",
+          "date": "YYYY-MM-DD",
+          "notes": "Field measurement log verified."
+        },
+        {
+          "title": "Field Verification Log Badge",
+          "type": "Official Audit",
+          "status": "VERIFIED",
+          "image_url": "assets/placeholder-badge.jpg",
+          "date": "YYYY-MM-DD",
+          "notes": "Signed community verification record."
+        },
+        {
+          "title": "Evidence Item #4",
+          "type": "Workshop / Activity",
+          "status": "VERIFIED",
+          "image_url": "assets/placeholder-photo-3.jpg",
+          "date": "YYYY-MM-DD",
+          "notes": "Local stakeholder participation documented."
+        }
+      ],
+      "milestones": [
+        {
+          "task": "Activity Milestone #1 (e.g., Site Preparation)",
+          "eo_verified": true,
+          "ground_verified": true
+        },
+        {
+          "task": "Activity Milestone #2 (e.g., Initial Planting)",
+          "eo_verified": true,
+          "ground_verified": true
+        },
+        {
+          "task": "Activity Milestone #3 (e.g., Maintenance & Monitoring)",
+          "eo_verified": false,
+          "ground_verified": true
+        }
+      ]
+    },
+    {
+      "id": "project-02",
+      "dropdown_label": "Project Placeholder #2 (Location B)",
+      "title": "Project Name Placeholder #2",
+      "organisation": "Second Organisation Placeholder",
+      "verification_status": "Pending EO Sync",
+      "coordinates": [-20.35, 57.45],
+      "zoom_level": 13,
+      "boundary_polygon": [],
+      "start_date": "YYYY-MM",
+      "description": "Second project description placeholder for multi-site demonstration.",
+      "analysis_file": "data/analysis_project_02.json",
+      "community_evidence": [],
+      "milestones": []
+    }
+  ]
+}
