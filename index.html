@@ -21,7 +21,9 @@
         .menu-link{display:flex;align-items:center;gap:14px;border-radius:10px;padding:14px;color:#cbd5e1;font-size:15px;transition:background .2s,color .2s}.menu-link:hover,.menu-link:focus{background:#1e293b;color:#6ee7b7;outline:none}.menu-arrow{margin-left:auto;color:#34d399}
         @media(prefers-reduced-motion:reduce){.menu-backdrop,.slide-menu{transition-duration:.01ms}}
     </style>
-</head>
+    <script src="page-loader.js"></script>
+    <script src="auth-guard.js"></script>
+  </head>
 <body class="min-h-screen bg-slate-950 font-sans text-slate-100 antialiased">
 
     <div class="flex min-h-screen flex-col">
@@ -149,7 +151,7 @@
                 </div>
 
                 <!-- 3. Journal de Validation des Étapes (Project Milestone Validation Log) -->
-                <section class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-lg" aria-labelledby="trend-heading">
+                <section id="trend-section" class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-lg" aria-labelledby="trend-heading">
                     <h3 id="trend-heading" data-i18n="chart.initialTitle" class="mb-3 text-sm font-bold uppercase tracking-wide text-white">Landsat 8 NDVI observations and trend</h3>
                     <div class="chart-container"><canvas id="trendChart" data-i18n-aria="chart.aria" aria-label="Landsat 8 NDVI values over time"></canvas></div>
                     <p data-i18n="chart.note" class="mt-2 text-xs text-slate-500">NDVI is a vegetation greenness indicator. An upward trend alone does not prove that the project caused the change.</p>
@@ -183,18 +185,22 @@
                 </section>
 
                 <div id="milestones" class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-lg">
-                    <div class="mb-3 flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div class="mb-3 grid grid-cols-[minmax(0,1fr)_4rem_5rem_5rem] items-center gap-2 border-b border-slate-800 pb-2">
                         <h3 data-i18n="milestone.title" class="text-sm font-bold uppercase tracking-wide text-white">
                             Project milestone validation log
                         </h3>
-                        <div class="flex gap-6 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                            <span data-i18n="milestone.eo">EO verified</span>
-                            <span data-i18n="milestone.ground">Ground verified</span>
-                        </div>
+                        <span data-i18n="milestone.eo" class="text-right text-[10px] font-semibold uppercase tracking-wide text-slate-400">EO verified</span>
+                        <span data-i18n="milestone.public" class="text-right text-[10px] font-semibold uppercase tracking-wide text-slate-400">Site record</span>
+                        <span data-i18n="milestone.ground" class="text-right text-[10px] font-semibold uppercase tracking-wide text-slate-400">Ground verified</span>
                     </div>
+                    <p data-i18n="milestone.context" class="mb-3 text-xs leading-5 text-slate-400">Satellite observations monitor vegetation trends; they do not verify individual planting or maintenance activities. Ground verification requires dated field records.</p>
                     <!-- Injecté dynamiquement par app.js -->
                     <div id="ui-milestone-log" class="divide-y divide-slate-800/60">
                         <p class="py-2 text-xs text-slate-500" data-i18n="milestone.empty">No milestone records are available.</p>
+                    </div>
+                    <div id="ui-public-evidence" class="mt-4 border-t border-slate-800 pt-3">
+                        <h4 data-i18n="milestone.sourcesTitle" class="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-400">Reviewed public sources and limitations</h4>
+                        <div id="ui-public-evidence-list" class="grid gap-2 sm:grid-cols-2"></div>
                     </div>
                 </div>
 

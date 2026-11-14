@@ -4,13 +4,21 @@ PlanetCred is an Earth observation intelligence dashboard that brings community 
 
 ## Run locally
 
-The interface is a static HTML/CSS/JavaScript site. From this directory, start a local web server so the browser can load the project data files:
+The app uses a small Node.js server for username/password authentication and to serve the dashboard. Node.js 18 or newer is recommended; no npm packages are needed.
+
+1. Copy `.env.example` to `.env`.
+2. Edit `.env` and set your own `PLANETCRED_USERNAME` and a unique `PLANETCRED_PASSWORD` of at least 12 characters. Keep `.env` private; it is excluded from Git.
+3. Start the app:
 
 ```bash
-python -m http.server 8000
+node server.js
 ```
 
-Then open [http://localhost:8000](http://localhost:8000). The dashboard uses Leaflet, Chart.js, and Tailwind CSS from CDNs, so an internet connection is needed for those libraries and map tiles.
+4. Open [http://127.0.0.1:8000](http://127.0.0.1:8000). You will be sent to the login page first, then to the dashboard after signing in.
+
+New users can select **Sign Up** on the login page. Accounts are stored locally in `.auth/accounts.json`; passwords are stored as salted scrypt hashes, never as plain text. The `.auth/` folder is excluded from Git. Use a username of 3–32 letters, numbers, dots, underscores, or hyphens and a password of at least 12 characters.
+
+Do not use Live Server or `python -m http.server` for the authenticated app: those static servers do not run the authentication API. The dashboard uses Leaflet, Chart.js, Tailwind CSS, and online map imagery from CDNs, so an internet connection is needed for those services.
 
 Python analysis dependencies are listed in `requirements.txt`. Install them when working with the data analysis scripts:
 

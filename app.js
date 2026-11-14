@@ -30,9 +30,13 @@ if (menuOpenButton) {
 // 1. INITIALISATION DE LA CARTE LEAFLET & VARIABLES GLOBALES
 const map = L.map("map").setView([-20.25, 57.55], 10);
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: "&copy; OpenStreetMap contributors",
-}).addTo(map);
+const satelliteBasemap = L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  {
+    maxZoom: 19,
+    attribution: "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics",
+  },
+).addTo(map);
 
 let allProjects = [];
 let projectPolygon = null;
@@ -44,6 +48,8 @@ let landsatAfterLayer = null;
 let sentinelBeforeLayer = null;
 let sentinelAfterLayer = null;
 let activeProject = null;
+let currentAnalysisData = null;
+let currentAnalysisProjectId = null;
 
 // 2. INITIALISATION DU GRAPHIQUE TEMPOREL (Chart.js)
 const chartCanvas = document.getElementById("trendChart");
@@ -146,7 +152,7 @@ const trendChart =
 
 // 3. CHARGEMENT INITIAL DES PROJETS DEPUIS LE JSON
 function initDashboard() {
-  fetch("data/project_records.json")
+  return fetch("data/project_records.json")
     .then((res) => {
       if (!res.ok)
         throw new Error(`HTTP ${res.status} loading project_records.json`);
@@ -169,15 +175,13 @@ function initDashboard() {
       });
 
       // Charger le premier projet par défaut
-      if (allProjects.length > 0) {
-        renderProjectDetails(allProjects[0]);
-      }
-
       // Écouter le changement de projet dans le menu déroulant
       selector.addEventListener("change", (e) => {
         const selectedProj = allProjects.find((p) => p.id === e.target.value);
         if (selectedProj) renderProjectDetails(selectedProj);
       });
+      if (allProjects.length > 0) return renderProjectDetails(allProjects[0]);
+      return Promise.resolve();
     })
     .catch((err) => {
       console.error("Unable to load project_records.json:", err);
@@ -243,65 +247,51 @@ function renderProjectDetails(project) {
         "proof.projectPhoto",
       ];
       project.community_evidence.forEach((item, index) => {
-        const title = t(titleKeys[index] || "proof.source");
+        const title = item.title_key
+          ? t(item.title_key)
+          : item.title || t(titleKeys[index] || "proof.source");
         const card = document.createElement("article");
         card.className =
           "flex flex-col justify-between rounded-lg border border-slate-700 bg-slate-800/80 p-2";
-        card.innerHTML = `<div class="relative mb-2 flex h-24 items-center justify-center overflow-hidden rounded bg-slate-900"><img class="h-full w-full object-cover"><span class="evidence-status absolute right-1 top-1 rounded border border-emerald-600/50 bg-emerald-950/90 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400"></span></div><p class="evidence-title truncate text-xs font-semibold text-white"></p><p class="evidence-type mt-1 text-[10px] text-slate-400"></p><div class="mt-1.5 flex items-center justify-between border-t border-slate-700/70 pt-1.5"><span class="evidence-check text-[10px] font-medium text-emerald-400"></span><button type="button" class="rounded bg-slate-700 px-2 py-0.5 text-[10px] text-slate-200 transition hover:bg-slate-600"></button></div>`;
+        card.innerHTML = `<div class="relative mb-2 flex h-24 items-center justify-center overflow-hidden rounded bg-slate-900"><img class="h-full w-full object-cover"><span class="evidence-status absolute right-1 top-1 rounded border border-sky-600/50 bg-slate-950/90 px-1.5 py-0.5 text-[10px] font-bold text-sky-300"></span></div><p class="evidence-title min-h-8 text-xs font-semibold leading-4 text-white" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden"></p><p class="evidence-type mt-1 truncate text-[10px] text-slate-400"></p><details class="evidence-details mt-2 border-t border-slate-700/70 pt-1.5"><summary class="cursor-pointer text-[10px] font-semibold text-emerald-300 hover:text-emerald-200"></summary><div class="mt-2 space-y-1.5"><p class="evidence-note text-[10px] leading-4 text-slate-300"></p><p class="evidence-meta break-words text-[10px] leading-4 text-slate-500"></p><a class="evidence-source-link inline-flex rounded bg-slate-700 px-2 py-1 text-[10px] text-slate-200 transition hover:bg-slate-600" target="_blank" rel="noopener noreferrer"></a></div></details>`;
         const image = card.querySelector("img");
         image.src = item.image_url;
         image.alt = title;
         image.onerror = () => {
           image.style.display = "none";
         };
-        card.querySelector(".evidence-status").textContent =
-          `● ${t("proof.source")}`;
-        card.querySelector(".evidence-title").textContent = title;
-        card.querySelector(".evidence-type").textContent = t(
-          typeKeys[index] || "proof.fieldPhoto",
+        card.querySelector(".evidence-status").textContent = t(
+          item.status_key || "proof.source",
         );
-        card.querySelector(".evidence-check").textContent =
-          `✓ ${t("proof.source")}`;
-        const inspect = card.querySelector("button");
-        inspect.textContent = t("proof.inspect");
-        inspect.addEventListener("click", () => {
-          const note = t(noteKeys[index] || "proof.source");
-          window.alert(
-            `${t("proof.auditLog")}: ${note}${item.date ? ` (${item.date})` : ""}`,
-          );
-        });
+        card.querySelector(".evidence-title").textContent = title;
+        card.querySelector(".evidence-type").textContent = item.type_key
+          ? t(item.type_key)
+          : t(typeKeys[index] || "proof.fieldPhoto");
+        card.querySelector(".evidence-note").textContent = item.note_key
+          ? t(item.note_key)
+          : t(noteKeys[index] || "proof.source");
+        card.querySelector(".evidence-meta").textContent = [
+          item.credit,
+          item.date ? `${t("proof.date")}: ${item.date}` : null,
+          Array.isArray(item.coordinates)
+            ? `${t("proof.coordinates")}: ${item.coordinates.join(", ")}`
+            : null,
+        ].filter(Boolean).join(" · ");
+        card.querySelector(".evidence-details summary").textContent = t("proof.details");
+        const sourceLink = card.querySelector(".evidence-source-link");
+        sourceLink.href = item.source_url || item.image_url;
+        sourceLink.textContent = t("proof.viewSource");
+        sourceLink.setAttribute("aria-label", `${t("proof.viewSource")}: ${title}`);
         evidenceContainer.appendChild(card);
       });
     }
   }
 
   // C. Journal "Project Milestone Validation Log" (EO Verified vs Ground Verified)
-  const milestoneContainer = document.getElementById("ui-milestone-log");
-  if (milestoneContainer) {
-    milestoneContainer.innerHTML = "";
-    project.milestones.forEach((m) => {
-      const eoIcon = m.eo_verified
-        ? '<span class="text-emerald-400 font-bold">✓</span>'
-        : '<span class="text-slate-600">○</span>';
-      const groundIcon = m.ground_verified
-        ? '<span class="text-emerald-400 font-bold">✓</span>'
-        : '<span class="text-slate-600">○</span>';
-      const milestoneKeys = [
-        "milestone.sitePrep",
-        "milestone.planting",
-        "milestone.monitoring",
-      ];
-      milestoneContainer.innerHTML += `
-                <div class="flex justify-between items-center py-2 border-b border-slate-800/80 text-xs">
-                    <span class="text-slate-300">${t(milestoneKeys[project.milestones.indexOf(m)] || "milestone.empty")}</span>
-                    <div class="flex gap-12 pr-4">
-                        <span>${eoIcon}</span>
-                        <span>${groundIcon}</span>
-                    </div>
-                </div>
-            `;
-    });
-  }
+  renderMilestones(
+    project,
+    currentAnalysisProjectId === project.id ? currentAnalysisData : null,
+  );
 
   // D. Mise à jour de la carte (Zoom + Polygone vert + Marqueur)
   map.setView(project.coordinates, project.zoom_level || 13);
@@ -328,18 +318,154 @@ function renderProjectDetails(project) {
 
   // E. Charger les résultats d'analyse NASA associés à ce projet
   if (project.analysis_file) {
-    loadNasaAnalysis(project.analysis_file);
+    return loadNasaAnalysis(project.analysis_file, project.id);
   }
+  return Promise.resolve();
 }
 
 // 5. CHARGEMENT DES DONNÉES SCIENTIFIQUES NASA (GEE + GIBS)
-function loadNasaAnalysis(analysisJsonPath) {
-  fetch(analysisJsonPath)
+
+function renderMilestones(project, nasaData) {
+  const container = document.getElementById("ui-milestone-log");
+  if (!container) return;
+  container.replaceChildren();
+
+  const milestoneKeys = ["milestone.sitePrep", "milestone.planting", "milestone.monitoring"];
+  const evidenceById = new Map((project.public_evidence || []).map((item) => [item.id, item]));
+  const createStatus = (verified, verifiedLabelKey = "milestone.verified") => {
+    const status = document.createElement("span");
+    status.className = verified
+      ? "justify-self-end text-base font-bold text-emerald-400"
+      : "justify-self-end text-sm text-slate-600";
+    status.textContent = verified ? String.fromCharCode(10003) : String.fromCharCode(9675);
+    const statusLabel = verified ? t(verifiedLabelKey) : t("milestone.notVerified");
+    status.setAttribute("aria-label", statusLabel);
+    status.title = statusLabel;
+    return status;
+  };
+  const createEvidenceDetails = (item) => {
+    const details = document.createElement("details");
+    details.className = "mt-1.5 rounded border border-slate-700/70 bg-slate-950/30 px-2 py-1.5";
+    const summary = document.createElement("summary");
+    summary.className = "cursor-pointer text-[10px] font-semibold text-sky-300 hover:text-sky-200";
+    const link = document.createElement("a");
+    link.href = item.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = item.title;
+    link.addEventListener("click", (event) => event.stopPropagation());
+    summary.append(link);
+    details.appendChild(summary);
+    const body = document.createElement("div");
+    body.className = "mt-1.5 space-y-1 text-[10px] leading-4 text-slate-400";
+    const addLine = (label, value) => {
+      if (!value) return;
+      const line = document.createElement("p");
+      line.textContent = `${label}: ${value}`;
+      body.appendChild(line);
+    };
+    addLine(t("milestone.publisher"), item.publisher);
+    addLine(t("milestone.publicationDate"), item.publication_date || t("milestone.notSpecified"));
+    addLine(t("milestone.period"), item.activity_period);
+    addLine(t("milestone.reviewedOn"), item.reviewed_on);
+    addLine(t("milestone.evidenceType"), t(`milestone.type.${item.evidence_type}`));
+    addLine(t("milestone.site"), item.site_name);
+    addLine(t("milestone.scope"), t(`milestone.scope.${item.evidence_scope}`));
+    if (Array.isArray(item.coordinates)) addLine(t("milestone.coordinates"), item.coordinates.join(", "));
+    addLine(t("milestone.coordinatePrecision"), item.coordinate_precision);
+    addLine(t("milestone.claim"), item.claim);
+    addLine(t("milestone.method"), item.verification_method);
+    addLine(t("milestone.limitation"), item.limitations);
+    addLine(t("milestone.license"), item.license);
+    details.appendChild(body);
+    return details;
+  };
+  const createRow = (label, eoVerified, siteDocumented, groundVerified, detail = null, sources = []) => {
+    const row = document.createElement("div");
+    row.className = "grid grid-cols-[minmax(0,1fr)_4rem_5rem_5rem] items-start gap-2 border-b border-slate-800/60 py-2 text-xs";
+    const labelCell = document.createElement("div");
+    const title = document.createElement("p");
+    title.className = "text-slate-300";
+    title.textContent = label;
+    labelCell.appendChild(title);
+    if (detail) {
+      const note = document.createElement("p");
+      note.className = "mt-1 leading-5 text-slate-500";
+      note.textContent = detail;
+      labelCell.appendChild(note);
+    }
+    sources.forEach((source) => labelCell.appendChild(createEvidenceDetails(source)));
+    row.append(
+      labelCell,
+      createStatus(eoVerified),
+      createStatus(siteDocumented, "milestone.siteRecordTooltip"),
+      createStatus(groundVerified),
+    );
+    container.appendChild(row);
+  };
+
+  (project.milestones || []).forEach((milestone, index) => {
+    const sources = (milestone.evidence_refs || []).map((id) => evidenceById.get(id)).filter(Boolean);
+    createRow(
+      t(milestoneKeys[index] || "milestone.empty"),
+      Boolean(milestone.eo_verified),
+      milestone.public_evidence_status === "documented_site_level",
+      Boolean(milestone.ground_verified),
+      milestone.public_evidence_status === "documented_site_level" ? t("milestone.siteScopeNotice") : null,
+      sources,
+    );
+  });
+
+  const sourceList = document.getElementById("ui-public-evidence-list");
+  if (sourceList) {
+    sourceList.replaceChildren();
+    const linkedIds = new Set((project.milestones || []).flatMap((item) => item.evidence_refs || []));
+    (project.public_evidence || []).filter((item) => !linkedIds.has(item.id)).forEach((item) => {
+      sourceList.appendChild(createEvidenceDetails(item));
+    });
+  }
+
+  const dates = nasaData?.serie_temporelle?.dates || [];
+  const values = nasaData?.serie_temporelle?.valeurs || [];
+  const observedPoints = buildNdviTrend(dates, values).points;
+  const observedCount = observedPoints.length;
+  if (!observedCount) return;
+
+  const trendKey = {
+    increasing: "trend.increasing",
+    decreasing: "trend.decreasing",
+    "no trend": "trend.noTrend",
+  }[nasaData.statistiques?.trend_direction] || "trend.noTrend";
+  const pValue = Number(nasaData.statistiques?.p_value);
+  const detail = t("milestone.monitoringSummary", {
+    count: observedCount,
+    first: new Date(observedPoints[0].x).getUTCFullYear(),
+    last: new Date(observedPoints.at(-1).x).getUTCFullYear(),
+    trend: t(trendKey),
+    pValue: Number.isFinite(pValue) ? pValue.toFixed(5) : "N/A",
+  });
+  createRow(t("milestone.satelliteMonitoring"), true, false, false, detail, []);
+  const monitoringRow = container.lastElementChild;
+  const chartLink = document.createElement("a");
+  chartLink.href = "#trend-section";
+  chartLink.className = "ml-2 font-semibold text-emerald-400 hover:text-emerald-300";
+  chartLink.textContent = t("milestone.viewChart");
+  monitoringRow.firstElementChild.appendChild(chartLink);
+  container.prepend(monitoringRow);
+}
+
+function loadNasaAnalysis(analysisJsonPath, projectId) {
+  const previewLoads = [];
+  return fetch(analysisJsonPath)
     .then((res) => {
       if (!res.ok) throw new Error("Fichier d'analyse NASA non généré.");
       return res.json();
     })
     .then((nasaData) => {
+      currentAnalysisData = nasaData;
+      currentAnalysisProjectId = projectId;
+      if (activeProject?.id !== projectId) return;
+      renderMilestones(activeProject, nasaData);
       // Mise à jour des KPIs du haut
       document.getElementById("ui-dataset").textContent = t(
         "metric.datasetLandsat",
@@ -453,7 +579,15 @@ function loadNasaAnalysis(analysisJsonPath) {
           const downloadLink = document.getElementById(
             `sentinel2-${period}-download`,
           );
+          preview.loading = "eager";
           preview.src = sentinel[period].preview;
+          previewLoads.push(
+            new Promise((resolve) => {
+              if (preview.complete) return resolve();
+              preview.addEventListener("load", resolve, { once: true });
+              preview.addEventListener("error", resolve, { once: true });
+            }),
+          );
           preview.alt = t("imagery.alt", {
             period: t(
               period === "before" ? "imagery.reference" : "imagery.recent",
@@ -518,6 +652,7 @@ function loadNasaAnalysis(analysisJsonPath) {
           opacity: 0.75,
         }).addTo(map);
       }
+      return Promise.all(previewLoads);
     })
     .catch((err) =>
       console.log("Mode Template (En attente des données GEE) :", err.message),
@@ -568,4 +703,7 @@ document.addEventListener("app-language-changed", () => {
 });
 
 // Start the application when the page has loaded.
-document.addEventListener("DOMContentLoaded", initDashboard);
+document.addEventListener("DOMContentLoaded", () => {
+  if (window.PageLoader) window.PageLoader.track(initDashboard());
+  else initDashboard();
+});

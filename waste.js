@@ -5,6 +5,16 @@ const POWER_START = `${BASELINE_YEAR}0101`;
 const POWER_END = `${CURRENT_YEAR}1231`;
 const tr = (key, values) => (window.t ? window.t(key, values) : key);
 
+function waitForInitialTiles(layer) {
+  return new Promise((resolve) => {
+    const timeout = window.setTimeout(resolve, 30000);
+    layer.once("load", () => {
+      window.clearTimeout(timeout);
+      resolve();
+    });
+  });
+}
+
 const wasteMap = L.map("waste-map", { scrollWheelZoom: true }).setView(
   DEFAULT_CENTER,
   10,
@@ -15,7 +25,9 @@ const satelliteLayer = L.tileLayer(
     maxZoom: 19,
     attribution: "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics",
   },
-).addTo(wasteMap);
+);
+const satelliteTilesReady = waitForInitialTiles(satelliteLayer);
+satelliteLayer.addTo(wasteMap);
 
 const modisDate = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
   .toISOString()
@@ -32,7 +44,9 @@ const thermalLayer = L.tileLayer.wms(
     opacity: 0.58,
     attribution: "NASA EOSDIS GIBS / MODIS Terra LST",
   },
-).addTo(wasteMap);
+);
+const nasaTilesReady = waitForInitialTiles(thermalLayer);
+thermalLayer.addTo(wasteMap);
 
 let mapLayerControl;
 let mapLegendControl;
@@ -336,8 +350,11 @@ if (menuOpenButton && slideMenu && menuBackdrop && menuCloseButton) {
 
 async function scanLocation(query) {
   const button = document.getElementById("btn-search-location");
+  const buttonSpinner = document.getElementById("search-button-spinner");
   setSearchStatus("waste.searching", { query });
   button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  buttonSpinner?.classList.remove("hidden");
   button.classList.add("cursor-wait", "opacity-60");
 
   try {
@@ -388,6 +405,8 @@ async function scanLocation(query) {
     );
   } finally {
     button.disabled = false;
+    button.setAttribute("aria-busy", "false");
+    buttonSpinner?.classList.add("hidden");
     button.classList.remove("cursor-wait", "opacity-60");
   }
 }
@@ -433,4 +452,11 @@ document.addEventListener("app-language-changed", () => {
   setSearchStatus(searchStatus.key, searchStatus.values);
 });
 
-document.addEventListener("DOMContentLoaded", () => scanLocation("Mauritius"));
+document.addEventListener("DOMContentLoaded", () => {
+  const initialLoad = Promise.all([
+    scanLocation("Mauritius"),
+    satelliteTilesReady,
+    nasaTilesReady,
+  ]);
+  if (window.PageLoader) window.PageLoader.track(initialLoad);
+});
