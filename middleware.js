@@ -1,4 +1,4 @@
-import { next } from "@vercel/functions";
+const { next } = require("@vercel/functions");
 
 const PUBLIC_PAGE = /^\/(?:login\.html|login\.js|auth-guard\.js|page-loader\.js|i18n\.js)$/;
 const PUBLIC_FLAG = /^\/assets\/flags\//;
@@ -49,7 +49,7 @@ async function validSession(request) {
   }
 }
 
-export default async function middleware(request) {
+module.exports = async function middleware(request) {
   const url = new URL(request.url);
   if (PUBLIC_PAGE.test(url.pathname) || PUBLIC_FLAG.test(url.pathname) || PUBLIC_AUTH_API.test(url.pathname)) {
     return next();
@@ -64,4 +64,4 @@ export default async function middleware(request) {
       "Cache-Control": "no-store",
     },
   });
-}
+};
