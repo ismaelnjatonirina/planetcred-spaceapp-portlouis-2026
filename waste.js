@@ -56,11 +56,13 @@ function refreshMapLayerControl() {
     .layers(
       { [tr("waste.baseSatellite")]: satelliteLayer },
       { [tr("waste.thermalLayer")]: thermalLayer },
-      { collapsed: false },
+      { collapsed: window.matchMedia("(max-width: 640px)").matches },
     )
     .addTo(wasteMap);
 }
 refreshMapLayerControl();
+const compactMapControls = window.matchMedia("(max-width: 640px)");
+compactMapControls.addEventListener?.("change", refreshMapLayerControl);
 
 function refreshMapLegend() {
   if (mapLegendControl) wasteMap.removeControl(mapLegendControl);
@@ -70,6 +72,7 @@ function refreshMapLegend() {
       "div",
       "rounded-lg border border-slate-600 bg-slate-950/90 px-3 py-2 text-[11px] text-white shadow-lg backdrop-blur-sm",
     );
+    legend.style.maxWidth = "min(72vw, 260px)";
     legend.setAttribute("aria-label", tr("waste.legendTitle"));
     legend.innerHTML = `
       <p class="mb-1.5 font-semibold">${tr("waste.legendTitle")}</p>

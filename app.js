@@ -226,7 +226,7 @@ function renderProjectDetails(project) {
   if (evidenceContainer) {
     evidenceContainer.innerHTML = ""; // Réinitialiser la galerie
     if (project.community_evidence.length === 0) {
-      evidenceContainer.innerHTML = `<p class="col-span-2 text-xs text-slate-500">${t("proof.empty")}</p>`;
+      evidenceContainer.innerHTML = `<p class="col-span-full text-xs text-slate-500">${t("proof.empty")}</p>`;
     } else {
       const titleKeys = [
         "proof.planting",
@@ -382,7 +382,7 @@ function renderMilestones(project, nasaData) {
   };
   const createRow = (label, eoVerified, siteDocumented, groundVerified, detail = null, sources = []) => {
     const row = document.createElement("div");
-    row.className = "grid grid-cols-[minmax(0,1fr)_4rem_5rem_5rem] items-start gap-2 border-b border-slate-800/60 py-2 text-xs";
+    row.className = "grid grid-cols-[minmax(0,1fr)_2.5rem_3rem_3.75rem] items-start gap-1 border-b border-slate-800/60 py-2 text-[11px] sm:grid-cols-[minmax(0,1fr)_4rem_5rem_5rem] sm:gap-2 sm:text-xs";
     const labelCell = document.createElement("div");
     const title = document.createElement("p");
     title.className = "text-slate-300";

@@ -173,6 +173,14 @@
   };
   Object.entries(publicPhotoTranslations).forEach(([language, entries]) => Object.assign(translations[language], entries));
 
+  const milestoneShortTranslations = {
+    en: { "milestone.eoShort": "EO", "milestone.publicShort": "Site", "milestone.groundShort": "Ground" },
+    fr: { "milestone.eoShort": "EO", "milestone.publicShort": "Site", "milestone.groundShort": "Terrain" },
+    mg: { "milestone.eoShort": "EO", "milestone.publicShort": "Toerana", "milestone.groundShort": "Tany" },
+    ig: { "milestone.eoShort": "EO", "milestone.publicShort": "Ebe", "milestone.groundShort": "Ala" },
+  };
+  Object.entries(milestoneShortTranslations).forEach(([language, entries]) => Object.assign(translations[language], entries));
+
   const milestoneUiTranslations = {
     en: {
       "milestone.context": "Satellite trends describe vegetation change; they do not verify individual project activities. Ground verification requires dated field records.",
@@ -386,7 +394,8 @@
     if (!header || document.getElementById("language-control")) return;
     const wrapper = document.createElement("div");
     wrapper.id = "language-control";
-    wrapper.className = "relative ml-auto shrink-0 text-sm";
+    const actions = document.getElementById("header-actions");
+    wrapper.className = actions ? "relative shrink-0 text-sm" : "relative ml-auto shrink-0 text-sm";
     wrapper.innerHTML = `
       <button id="language-toggle" type="button" class="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white hover:border-emerald-500" aria-haspopup="true" aria-expanded="false" aria-label="${t("nav.language")}">
         <span id="language-current" class="inline-flex items-center gap-2"><img src="${languages[current].flag}" alt="" class="h-4 w-5 rounded-sm object-cover"><span>${languages[current].name}</span></span><span aria-hidden="true" class="ml-2 text-slate-400">▾</span>
@@ -394,7 +403,7 @@
       <div id="language-options" class="absolute right-0 z-[1000] mt-2 hidden min-w-48 overflow-hidden rounded-lg border border-slate-700 bg-slate-900 p-1 shadow-xl" role="menu" aria-label="${t("nav.language")}">
         ${Object.entries(languages).map(([code, language]) => `<button type="button" role="menuitemradio" data-language="${code}" aria-pressed="${code === current}" class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-slate-200 hover:bg-slate-800"><img src="${language.flag}" alt="" class="h-4 w-5 rounded-sm object-cover"><span>${language.name}</span></button>`).join("")}
       </div>`;
-    header.appendChild(wrapper);
+    (actions || header).appendChild(wrapper);
     const toggle = wrapper.querySelector("#language-toggle");
     const options = wrapper.querySelector("#language-options");
     toggle.addEventListener("click", () => {
