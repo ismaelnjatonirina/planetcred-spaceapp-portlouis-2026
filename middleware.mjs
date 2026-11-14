@@ -64,4 +64,4 @@ export default async function middleware(request) {
       "Cache-Control": "no-store",
     },
   });
-}\n
+}
