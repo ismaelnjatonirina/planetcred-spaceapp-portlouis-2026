@@ -30,8 +30,8 @@ if (menuOpenButton) {
 // 1. INITIALISATION DE LA CARTE LEAFLET & VARIABLES GLOBALES
 const map = L.map("map").setView([-20.25, 57.55], 10);
 
-L.tileLayer("https://{s}://{z}/{x}/{y}{r}.png", {
-  attribution: "&copy; OpenStreetMap &copy; CARTO &copy; NASA EOSDIS GIBS",
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "&copy; OpenStreetMap contributors",
 }).addTo(map);
 
 let allProjects = [];
@@ -39,56 +39,132 @@ let projectPolygon = null;
 let projectMarker = null;
 let gibsBeforeLayer = null;
 let gibsAfterLayer = null;
+let landsatBeforeLayer = null;
+let landsatAfterLayer = null;
+let sentinelBeforeLayer = null;
+let sentinelAfterLayer = null;
+let activeProject = null;
 
 // 2. INITIALISATION DU GRAPHIQUE TEMPOREL (Chart.js)
-const ctx = document.getElementById("trendChart").getContext("2d");
-const trendChart = new Chart(ctx, {
-  type: "line",
-  data: {
-    labels: ["T1", "T2", "T3", "T4", "T5"],
-    datasets: [
-      {
-        label: "Environmental Variable (Placeholder)",
-        data: [0.2, 0.25, 0.22, 0.3, 0.35],
-        borderColor: "#10b981",
-        backgroundColor: "rgba(16, 185, 129, 0.15)",
-        borderWidth: 2,
-        tension: 0.3,
-        fill: true,
+const chartCanvas = document.getElementById("trendChart");
+const ctx = chartCanvas ? chartCanvas.getContext("2d") : null;
+function buildNdviTrend(dates, values) {
+  const points = dates
+    .map((date, index) => ({
+      x: Date.parse(`${date}T00:00:00Z`),
+      y: Number(values[index]),
+    }))
+    .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+  if (points.length < 2) return { points, fitted: [] };
+
+  const firstTime = points[0].x;
+  const years = points.map((point) => (point.x - firstTime) / 31557600000);
+  const meanX = years.reduce((sum, value) => sum + value, 0) / years.length;
+  const meanY = points.reduce((sum, point) => sum + point.y, 0) / points.length;
+  const denominator = years.reduce(
+    (sum, value) => sum + (value - meanX) ** 2,
+    0,
+  );
+  const slope =
+    years.reduce(
+      (sum, value, index) => sum + (value - meanX) * (points[index].y - meanY),
+      0,
+    ) / denominator;
+  const fitted = [points[0], points[points.length - 1]].map((point, index) => ({
+    x: point.x,
+    y: meanY + slope * (years[index === 0 ? 0 : years.length - 1] - meanX),
+  }));
+  return { points, fitted };
+}
+
+function inclusiveWindowLabel(period) {
+  const endExclusive = new Date(`${period[1]}T00:00:00Z`);
+  endExclusive.setUTCDate(endExclusive.getUTCDate() - 1);
+  return `${period[0]} – ${endExclusive.toISOString().slice(0, 10)}`;
+}
+
+const trendChart =
+  ctx &&
+  new Chart(ctx, {
+    type: "line",
+    data: {
+      datasets: [
+        {
+          label: "Observed NDVI",
+          data: [],
+          borderColor: "#10b981",
+          backgroundColor: "rgba(16, 185, 129, 0.15)",
+          borderWidth: 1.8,
+          pointRadius: 2,
+          pointHoverRadius: 4,
+          tension: 0.15,
+          fill: true,
+        },
+        {
+          label: "Linear trend from observed data",
+          data: [],
+          borderColor: "#a7f3d0",
+          borderDash: [7, 5],
+          borderWidth: 2.5,
+          pointRadius: 0,
+          tension: 0,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: "#cbd5e1" } },
+        tooltip: {
+          callbacks: {
+            title: (items) =>
+              items.length
+                ? new Date(items[0].parsed.x).toISOString().slice(0, 10)
+                : "",
+          },
+        },
       },
-    ],
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: "#cbd5e1" } } },
-    scales: {
-      y: {
-        grid: { color: "rgba(255, 255, 255, 0.05)" },
-        ticks: { color: "#94a3b8" },
-      },
-      x: {
-        grid: { color: "rgba(255, 255, 255, 0.05)" },
-        ticks: { color: "#94a3b8" },
+      scales: {
+        y: {
+          grid: { color: "rgba(255, 255, 255, 0.05)" },
+          ticks: { color: "#94a3b8" },
+        },
+        x: {
+          type: "linear",
+          grid: { color: "rgba(255, 255, 255, 0.05)" },
+          ticks: {
+            color: "#94a3b8",
+            maxTicksLimit: 7,
+            callback: (value) => new Date(Number(value)).getUTCFullYear(),
+          },
+        },
       },
     },
-  },
-});
+  });
 
 // 3. CHARGEMENT INITIAL DES PROJETS DEPUIS LE JSON
 function initDashboard() {
   fetch("data/project_records.json")
-    .then((res) => res.json())
+    .then((res) => {
+      if (!res.ok)
+        throw new Error(`HTTP ${res.status} loading project_records.json`);
+      return res.json();
+    })
     .then((data) => {
       allProjects = data.projects;
       const selector = document.getElementById("project-selector");
+      if (!selector || !Array.isArray(allProjects)) {
+        throw new Error("project-selector or projects array is missing");
+      }
       selector.innerHTML = ""; // Nettoyer les options par défaut
 
       // Remplir le menu déroulant
       allProjects.forEach((proj) => {
         const option = document.createElement("option");
         option.value = proj.id;
-        option.textContent = proj.dropdown_label;
+        option.textContent = localizedProjectLabel(proj);
         selector.appendChild(option);
       });
 
@@ -103,46 +179,98 @@ function initDashboard() {
         if (selectedProj) renderProjectDetails(selectedProj);
       });
     })
-    .catch((err) =>
-      console.warn("En attente du fichier project_records.json :", err),
-    );
+    .catch((err) => {
+      console.error("Unable to load project_records.json:", err);
+      const selector = document.getElementById("project-selector");
+      if (selector)
+        selector.innerHTML = `<option value="">${t("common.unavailable")}</option>`;
+    });
+}
+
+function localizedProjectLabel(project) {
+  if (project.id === "project-01") return t("project.title");
+  if (project.id === "project-02") return t("project.pendingOption");
+  return project.dropdown_label;
 }
 
 // 4. MISE À JOUR DE LA COLONNE DE GAUCHE, DE LA CARTE ET DES ÉTAPES
 function renderProjectDetails(project) {
+  activeProject = project;
   // A. Informations textuelles de base
-  document.getElementById("ui-project-title").textContent = project.title;
+  document.getElementById("ui-project-title").textContent =
+    project.id === "project-01"
+      ? t("project.title")
+      : t("project.pendingTitle");
+  const verificationBadge = document.getElementById("ui-verification");
+  if (verificationBadge)
+    verificationBadge.textContent = t(
+      project.id === "project-01"
+        ? "project.publicSources"
+        : "project.pendingStatus",
+    );
   document.getElementById("ui-org-name").textContent = project.organisation;
   document.getElementById("ui-coords").textContent =
     project.coordinates.join(", ");
   document.getElementById("ui-start-date").textContent = project.start_date;
-  document.getElementById("ui-description").textContent = project.description;
+  document.getElementById("ui-description").textContent =
+    project.id === "project-01"
+      ? t("project.description")
+      : t("project.pendingDescription");
 
   // B. Galerie "Community Proof Visualizer" (Preuves terrain)
   const evidenceContainer = document.getElementById("ui-evidence-gallery");
   if (evidenceContainer) {
     evidenceContainer.innerHTML = ""; // Réinitialiser la galerie
     if (project.community_evidence.length === 0) {
-      evidenceContainer.innerHTML = `<p class="text-xs text-slate-500 col-span-2">No ground evidence uploaded yet.</p>`;
+      evidenceContainer.innerHTML = `<p class="col-span-2 text-xs text-slate-500">${t("proof.empty")}</p>`;
     } else {
-      project.community_evidence.forEach((item) => {
-        evidenceContainer.innerHTML += `
-                    <div class="bg-slate-800/80 border border-slate-700 rounded-lg p-2 flex flex-col justify-between">
-                        <div class="relative h-24 bg-slate-900 rounded overflow-hidden mb-2 flex items-center justify-center">
-                            <img src="${item.image_url}" alt="${item.title}" class="object-cover w-full h-full" onerror="this.style.display='none'">
-                            <span class="absolute top-1 right-1 bg-emerald-950/90 text-emerald-400 border border-emerald-600/50 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                                ● ${item.status}
-                            </span>
-                        </div>
-                        <p class="text-xs font-semibold text-white truncate">${item.title}</p>
-                        <div class="flex justify-between items-center mt-1.5 pt-1.5 border-t border-slate-700/70">
-                            <span class="text-[10px] text-emerald-400 font-medium">✓ ${item.status}</span>
-                            <button onclick="alert('Audit Log: ${item.notes} (${item.date})')" class="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-200 px-2 py-0.5 rounded transition">
-                                Inspect
-                            </button>
-                        </div>
-                    </div>
-                `;
+      const titleKeys = [
+        "proof.planting",
+        "proof.saplings",
+        "proof.method",
+        "proof.forest",
+      ];
+      const noteKeys = [
+        "proof.plantingNote",
+        "proof.saplingNote",
+        "proof.methodNote",
+        "proof.forestNote",
+      ];
+      const typeKeys = [
+        "proof.fieldPhoto",
+        "proof.forestPhoto",
+        "proof.organizationSource",
+        "proof.projectPhoto",
+      ];
+      project.community_evidence.forEach((item, index) => {
+        const title = t(titleKeys[index] || "proof.source");
+        const card = document.createElement("article");
+        card.className =
+          "flex flex-col justify-between rounded-lg border border-slate-700 bg-slate-800/80 p-2";
+        card.innerHTML = `<div class="relative mb-2 flex h-24 items-center justify-center overflow-hidden rounded bg-slate-900"><img class="h-full w-full object-cover"><span class="evidence-status absolute right-1 top-1 rounded border border-emerald-600/50 bg-emerald-950/90 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400"></span></div><p class="evidence-title truncate text-xs font-semibold text-white"></p><p class="evidence-type mt-1 text-[10px] text-slate-400"></p><div class="mt-1.5 flex items-center justify-between border-t border-slate-700/70 pt-1.5"><span class="evidence-check text-[10px] font-medium text-emerald-400"></span><button type="button" class="rounded bg-slate-700 px-2 py-0.5 text-[10px] text-slate-200 transition hover:bg-slate-600"></button></div>`;
+        const image = card.querySelector("img");
+        image.src = item.image_url;
+        image.alt = title;
+        image.onerror = () => {
+          image.style.display = "none";
+        };
+        card.querySelector(".evidence-status").textContent =
+          `● ${t("proof.source")}`;
+        card.querySelector(".evidence-title").textContent = title;
+        card.querySelector(".evidence-type").textContent = t(
+          typeKeys[index] || "proof.fieldPhoto",
+        );
+        card.querySelector(".evidence-check").textContent =
+          `✓ ${t("proof.source")}`;
+        const inspect = card.querySelector("button");
+        inspect.textContent = t("proof.inspect");
+        inspect.addEventListener("click", () => {
+          const note = t(noteKeys[index] || "proof.source");
+          window.alert(
+            `${t("proof.auditLog")}: ${note}${item.date ? ` (${item.date})` : ""}`,
+          );
+        });
+        evidenceContainer.appendChild(card);
       });
     }
   }
@@ -153,14 +281,19 @@ function renderProjectDetails(project) {
     milestoneContainer.innerHTML = "";
     project.milestones.forEach((m) => {
       const eoIcon = m.eo_verified
-        ? '<span class="text-emerald-400 font-bold">✔</span>'
+        ? '<span class="text-emerald-400 font-bold">✓</span>'
         : '<span class="text-slate-600">○</span>';
       const groundIcon = m.ground_verified
-        ? '<span class="text-emerald-400 font-bold">✔</span>'
+        ? '<span class="text-emerald-400 font-bold">✓</span>'
         : '<span class="text-slate-600">○</span>';
+      const milestoneKeys = [
+        "milestone.sitePrep",
+        "milestone.planting",
+        "milestone.monitoring",
+      ];
       milestoneContainer.innerHTML += `
                 <div class="flex justify-between items-center py-2 border-b border-slate-800/80 text-xs">
-                    <span class="text-slate-300">${m.task}</span>
+                    <span class="text-slate-300">${t(milestoneKeys[project.milestones.indexOf(m)] || "milestone.empty")}</span>
                     <div class="flex gap-12 pr-4">
                         <span>${eoIcon}</span>
                         <span>${groundIcon}</span>
@@ -178,15 +311,19 @@ function renderProjectDetails(project) {
 
   projectMarker = L.marker(project.coordinates)
     .addTo(map)
-    .bindPopup(`<b>${project.title}</b><br>${project.organisation}`);
+    .bindPopup(
+      `<b>${project.id === "project-01" ? t("project.title") : t("project.pendingTitle")}</b><br>${project.organisation}`,
+    );
 
   if (project.boundary_polygon && project.boundary_polygon.length > 0) {
     projectPolygon = L.polygon(project.boundary_polygon, {
       color: "#10b981",
       fillColor: "#10b981",
-      fillOpacity: 0.25,
-      weight: 2,
-    }).addTo(map);
+      fillOpacity: 0.035,
+      weight: 3,
+    })
+      .bindTooltip(t("project.analysisExtent"))
+      .addTo(map);
   }
 
   // E. Charger les résultats d'analyse NASA associés à ce projet
@@ -204,34 +341,180 @@ function loadNasaAnalysis(analysisJsonPath) {
     })
     .then((nasaData) => {
       // Mise à jour des KPIs du haut
-      document.getElementById("ui-dataset").textContent =
-        nasaData.source_calcul;
-      document.getElementById("ui-trend").textContent =
-        nasaData.statistiques.trend_direction.toUpperCase();
-      document.getElementById("ui-pvalue").textContent =
-        nasaData.statistiques.p_value;
+      document.getElementById("ui-dataset").textContent = t(
+        "metric.datasetLandsat",
+      );
+      const trendKey =
+        {
+          increasing: "trend.increasing",
+          decreasing: "trend.decreasing",
+          "no trend": "trend.noTrend",
+        }[nasaData.statistiques.trend_direction] || "trend.noTrend";
+      document.getElementById("ui-trend").textContent = t(trendKey);
+      document.getElementById("ui-pvalue").textContent = Number(
+        nasaData.statistiques.p_value,
+      ).toFixed(5);
       document.getElementById("ui-significance").textContent = nasaData
         .statistiques.significatif
-        ? "Significant (p < 0.05)"
-        : "Not Significant";
+        ? t("metric.significant")
+        : t("metric.notSignificant");
 
       // Mise à jour du graphique Chart.js
-      trendChart.data.labels = nasaData.serie_temporelle.dates;
-      trendChart.data.datasets[0].data = nasaData.serie_temporelle.valeurs;
-      trendChart.data.datasets[0].label = "NASA Landsat 8 NDVI Time-Series";
-      trendChart.update();
+      if (trendChart) {
+        const dates = nasaData.serie_temporelle.dates;
+        const values = nasaData.serie_temporelle.valeurs;
+        const { points, fitted } = buildNdviTrend(dates, values);
+        const isSignificant = nasaData.statistiques.significatif;
+        const direction = nasaData.statistiques.trend_direction;
+        const trendColor =
+          direction === "increasing" && isSignificant
+            ? "#10b981"
+            : direction === "decreasing" && isSignificant
+              ? "#fb7185"
+              : "#fbbf24";
+        trendChart.data.datasets[0].data = points;
+        trendChart.data.datasets[0].label = t("chart.observed", {
+          count: points.length,
+        });
+        trendChart.data.datasets[0].borderColor = trendColor;
+        trendChart.data.datasets[0].backgroundColor =
+          direction === "increasing" && isSignificant
+            ? "rgba(16, 185, 129, 0.14)"
+            : "rgba(148, 163, 184, 0.10)";
+        trendChart.data.datasets[1].data = fitted;
+        trendChart.data.datasets[1].label = t("chart.fitted");
+        trendChart.data.datasets[1].borderColor = trendColor;
+        const startNDVI = points[0]?.y;
+        const endNDVI = points.at(-1)?.y;
+        if (Number.isFinite(startNDVI) && Number.isFinite(endNDVI)) {
+          const delta = endNDVI - startNDVI;
+          const percent =
+            startNDVI === 0 ? null : (delta / Math.abs(startNDVI)) * 100;
+          const formatSigned = (number, digits) =>
+            `${number >= 0 ? "+" : ""}${number.toFixed(digits)}`;
+          document.getElementById("ui-ndvi-change").textContent = t(
+            "metric.deltaFormat",
+            {
+              delta: formatSigned(delta, 3),
+              percent: percent === null ? "—" : formatSigned(percent, 1),
+            },
+          );
+        }
+        const firstYear = dates[0]?.slice(0, 4);
+        const lastYear = dates.at(-1)?.slice(0, 4);
+        document.getElementById("trend-heading").textContent = t(
+          "chart.title",
+          { first: firstYear, last: lastYear },
+        );
+        trendChart.update();
+      }
+      const sentinelSection = document.getElementById("sentinel2-downloads");
+      const sentinel = nasaData.sentinel2_visual;
+      const comparison = sentinel || nasaData.landsat_rgb;
+      if (comparison) {
+        const beforeRange =
+          comparison.before.period || comparison.before_period;
+        const afterRange = comparison.after.period || comparison.after_period;
+        const beforeYear = beforeRange[0].slice(0, 4);
+        const afterYear = afterRange[0].slice(0, 4);
+        document.getElementById("btn-layer-before").textContent = t(
+          "map.before",
+          { year: beforeYear },
+        );
+        document.getElementById("btn-layer-after").textContent = t(
+          "map.after",
+          { year: afterYear },
+        );
+        document.getElementById("btn-layer-before").title = t(
+          "map.windowTitle",
+          { range: inclusiveWindowLabel(beforeRange) },
+        );
+        document.getElementById("btn-layer-after").title = t(
+          "map.windowTitle",
+          { range: inclusiveWindowLabel(afterRange) },
+        );
+        document.getElementById("layer-period-caption").textContent = t(
+          "map.windows",
+          {
+            before: inclusiveWindowLabel(beforeRange),
+            after: inclusiveWindowLabel(afterRange),
+          },
+        );
+      }
+      if (sentinelSection && sentinel) {
+        sentinelSection.hidden = false;
+        ["before", "after"].forEach((period) => {
+          const preview = document.getElementById(
+            `sentinel2-${period}-preview`,
+          );
+          const previewLink = document.getElementById(
+            `sentinel2-${period}-open`,
+          );
+          const downloadLink = document.getElementById(
+            `sentinel2-${period}-download`,
+          );
+          preview.src = sentinel[period].preview;
+          preview.alt = t("imagery.alt", {
+            period: t(
+              period === "before" ? "imagery.reference" : "imagery.recent",
+            ),
+          });
+          previewLink.href = sentinel[period].preview;
+          downloadLink.href = sentinel[period].geotiff;
+          downloadLink.download = `sentinel2_${period}.tif`;
+          document.getElementById(`sentinel2-${period}-dates`).textContent =
+            inclusiveWindowLabel(sentinel[period].period);
+        });
+      }
+      const period = document.getElementById("ui-period");
+      if (period && nasaData.serie_temporelle.dates.length) {
+        period.textContent = `${nasaData.serie_temporelle.dates[0]} – ${nasaData.serie_temporelle.dates.at(-1)}`;
+      }
 
-      // Chargement des couches visuelles NASA GIBS (Avant / Après)
+      // Préférer Sentinel-2 (10 m), puis Landsat (30 m); GIBS reste le
+      // contexte de repli si le pipeline n'a pas encore produit les images.
       if (gibsBeforeLayer) map.removeLayer(gibsBeforeLayer);
       if (gibsAfterLayer) map.removeLayer(gibsAfterLayer);
+      if (landsatBeforeLayer) map.removeLayer(landsatBeforeLayer);
+      if (landsatAfterLayer) map.removeLayer(landsatAfterLayer);
+      if (sentinelBeforeLayer) map.removeLayer(sentinelBeforeLayer);
+      if (sentinelAfterLayer) map.removeLayer(sentinelAfterLayer);
 
-      if (nasaData.gibs_urls) {
+      if (sentinel && sentinel.bounds) {
+        sentinelBeforeLayer = L.imageOverlay(
+          sentinel.before.preview,
+          sentinel.bounds,
+          { opacity: 1, interactive: false },
+        );
+        sentinelAfterLayer = L.imageOverlay(
+          sentinel.after.preview,
+          sentinel.bounds,
+          { opacity: 1, interactive: false },
+        ).addTo(map);
+        if (projectPolygon) projectPolygon.bringToFront();
+        if (projectMarker) projectMarker.setZIndexOffset(1000);
+      } else if (nasaData.landsat_rgb && nasaData.landsat_rgb.bounds) {
+        landsatBeforeLayer = L.imageOverlay(
+          nasaData.landsat_rgb.before,
+          nasaData.landsat_rgb.bounds,
+          { opacity: 0.95, interactive: false },
+        );
+        landsatAfterLayer = L.imageOverlay(
+          nasaData.landsat_rgb.after,
+          nasaData.landsat_rgb.bounds,
+          { opacity: 0.95, interactive: false },
+        ).addTo(map);
+        if (projectPolygon) projectPolygon.bringToFront();
+        if (projectMarker) projectMarker.setZIndexOffset(1000);
+      } else if (nasaData.gibs_urls) {
         gibsBeforeLayer = L.tileLayer(nasaData.gibs_urls.true_color_avant, {
-          maxZoom: 9,
+          maxNativeZoom: 9,
+          maxZoom: 18,
           opacity: 0.75,
         });
         gibsAfterLayer = L.tileLayer(nasaData.gibs_urls.true_color_apres, {
-          maxZoom: 9,
+          maxNativeZoom: 9,
+          maxZoom: 18,
           opacity: 0.75,
         }).addTo(map);
       }
@@ -244,13 +527,45 @@ function loadNasaAnalysis(analysisJsonPath) {
 // 6. BOUTONS DE BASCULEMENT AVANT / APRÈS (NASA GIBS)
 document.getElementById("btn-layer-before").addEventListener("click", () => {
   if (gibsAfterLayer) map.removeLayer(gibsAfterLayer);
+  if (landsatAfterLayer) map.removeLayer(landsatAfterLayer);
+  if (sentinelAfterLayer) map.removeLayer(sentinelAfterLayer);
   if (gibsBeforeLayer) gibsBeforeLayer.addTo(map);
+  if (landsatBeforeLayer) landsatBeforeLayer.addTo(map);
+  if (sentinelBeforeLayer) sentinelBeforeLayer.addTo(map);
+  if (projectPolygon) projectPolygon.bringToFront();
+  if (projectMarker) projectMarker.setZIndexOffset(1000);
 });
 
 document.getElementById("btn-layer-after").addEventListener("click", () => {
   if (gibsBeforeLayer) map.removeLayer(gibsBeforeLayer);
+  if (landsatBeforeLayer) map.removeLayer(landsatBeforeLayer);
+  if (sentinelBeforeLayer) map.removeLayer(sentinelBeforeLayer);
   if (gibsAfterLayer) gibsAfterLayer.addTo(map);
+  if (landsatAfterLayer) landsatAfterLayer.addTo(map);
+  if (sentinelAfterLayer) sentinelAfterLayer.addTo(map);
+  if (projectPolygon) projectPolygon.bringToFront();
+  if (projectMarker) projectMarker.setZIndexOffset(1000);
 });
 
-// Lancement de l'application au chargement de la page
+// Refresh data-driven labels whenever the language selector changes.
+document.addEventListener("app-language-changed", () => {
+  const selector = document.getElementById("project-selector");
+  if (selector && allProjects.length) {
+    const selectedId = activeProject?.id || selector.value;
+    selector.innerHTML = "";
+    allProjects.forEach((project) => {
+      const option = document.createElement("option");
+      option.value = project.id;
+      option.textContent = localizedProjectLabel(project);
+      selector.appendChild(option);
+    });
+    selector.value = selectedId;
+    const selectedProject = allProjects.find(
+      (project) => project.id === selectedId,
+    );
+    if (selectedProject) renderProjectDetails(selectedProject);
+  }
+});
+
+// Start the application when the page has loaded.
 document.addEventListener("DOMContentLoaded", initDashboard);

@@ -2,80 +2,99 @@
   "projects": [
     {
       "id": "project-01",
-      "dropdown_label": "Project Placeholder #1 (Location A)",
-      "title": "Project Name Placeholder #1",
-      "organisation": "Organisation Name Placeholder",
-      "verification_status": "Verified Record",
-      "coordinates": [-20.25, 57.55],
-      "zoom_level": 13,
-      "boundary_polygon": [
-        [-20.248, 57.548],
-        [-20.248, 57.552],
-        [-20.252, 57.552],
-        [-20.252, 57.548]
+      "dropdown_label": "Ebony Forest (Chamarel)",
+      "title": "Ebony Forest Endemic Restoration",
+      "organisation": "Ebony Forest",
+      "verification_status": "Public sources only",
+      "coordinates": [
+        -20.4365,
+        57.3755
       ],
-      "start_date": "YYYY-MM",
-      "description": "Generic project description placeholder. Community actions and environmental objectives will be documented here.",
-      "analysis_file": "data/analysis_project_01.json",
+      "zoom_level": 14,
+      "boundary_polygon": [
+        [
+          -20.440098163070857,
+          57.371689935734686
+        ],
+        [
+          -20.440098163070857,
+          57.37932213849875
+        ],
+        [
+          -20.432900453619386,
+          57.37932213849875
+        ],
+        [
+          -20.432900453619386,
+          57.371689935734686
+        ]
+      ],
+      "start_date": "2006",
+      "description": "Ebony Forest works to restore Mauritius' endemic forest in Chamarel by controlling invasive plants, propagating native species, and planting endemic plants. Publicly sourced photos are illustrative and are not submitted community audit evidence.",
+      "analysis_file": "data/project_analysis.json",
       "community_evidence": [
         {
-          "title": "Evidence Item #1",
-          "type": "Field Photo",
-          "status": "VERIFIED",
-          "image_url": "assets/placeholder-photo-1.jpg",
-          "date": "YYYY-MM-DD",
-          "notes": "GPS metadata and timestamp verified."
+          "title": "Planting at Ebony Forest",
+          "type": "Illustrative field photo",
+          "status": "SOURCE",
+          "image_url": "https://biodtp.norwichresearchpark.ac.uk/app/uploads/2025/05/Antonia_planting_at_Ebony_forest-1.jpeg",
+          "date": "2025",
+          "notes": "Photo published by Norwich Research Park; source describes planting at Ebony Forest. Not a project audit record."
         },
         {
-          "title": "Evidence Item #2",
-          "type": "Growth Log",
-          "status": "VERIFIED",
-          "image_url": "assets/placeholder-photo-2.jpg",
-          "date": "YYYY-MM-DD",
-          "notes": "Field measurement log verified."
+          "title": "Sapling restoration",
+          "type": "Illustrative forest restoration photo",
+          "status": "SOURCE",
+          "image_url": "https://tourgrids.com/_next/image?q=75&url=https%3A%2F%2Fcdn.tourgrids.com%2Fdestinations%2Fmauritius%2F1769107098819-2_medium.jpg&w=1200",
+          "date": "",
+          "notes": "Image shown on a third-party Ebony Forest guide; illustrative only and not a dated audit record."
         },
         {
-          "title": "Field Verification Log Badge",
-          "type": "Official Audit",
-          "status": "VERIFIED",
-          "image_url": "assets/placeholder-badge.jpg",
-          "date": "YYYY-MM-DD",
-          "notes": "Signed community verification record."
+          "title": "Restoration method",
+          "type": "Organisation source",
+          "status": "SOURCE",
+          "image_url": "https://image1.slideserve.com/1931461/technique-de-plantation1-l.jpg",
+          "date": "",
+          "notes": "Mauritius Chamarel restoration technique image from a presentation; illustrative only, not an Ebony Forest audit badge."
         },
         {
-          "title": "Evidence Item #4",
-          "type": "Workshop / Activity",
-          "status": "VERIFIED",
-          "image_url": "assets/placeholder-photo-3.jpg",
-          "date": "YYYY-MM-DD",
-          "notes": "Local stakeholder participation documented."
+          "title": "Forest restoration in Mauritius",
+          "type": "Illustrative project photo",
+          "status": "SOURCE",
+          "image_url": "https://biodtp.norwichresearchpark.ac.uk/app/uploads/2025/05/Antonia_planting_at_Ebony_forest-1.jpeg",
+          "date": "",
+          "notes": "Photo published by Norwich Research Park; source describes planting at Ebony Forest. Not a project audit record."
         }
       ],
       "milestones": [
         {
           "task": "Activity Milestone #1 (e.g., Site Preparation)",
           "eo_verified": true,
-          "ground_verified": true
+          "ground_verified": false
         },
         {
           "task": "Activity Milestone #2 (e.g., Initial Planting)",
           "eo_verified": true,
-          "ground_verified": true
+          "ground_verified": false
         },
         {
           "task": "Activity Milestone #3 (e.g., Maintenance & Monitoring)",
           "eo_verified": false,
-          "ground_verified": true
+          "ground_verified": false
         }
-      ]
+      ],
+      "boundary_label": "Satellite analysis extent (400 m radius; bounding envelope)"
     },
     {
       "id": "project-02",
-      "dropdown_label": "Project Placeholder #2 (Location B)",
+      "dropdown_label": "Second project (pending data)",
       "title": "Project Name Placeholder #2",
       "organisation": "Second Organisation Placeholder",
       "verification_status": "Pending EO Sync",
-      "coordinates": [-20.35, 57.45],
+      "coordinates": [
+        -20.35,
+        57.45
+      ],
       "zoom_level": 13,
       "boundary_polygon": [],
       "start_date": "YYYY-MM",
