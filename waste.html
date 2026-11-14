@@ -3,250 +3,142 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PlanetCred DI | Waste & Thermal Hotspots</title>
-    <script src="https://jsdelivr.net"></script>
-    <link rel="stylesheet" href="https://unpkg.com" />
+    <meta name="description" content="Open waste facility data and NASA climate observations." />
+    <title data-i18n-title="waste.documentTitle">PlanetCred DI | Waste Management</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
     <style>
-      #waste-map {
-        height: 420px;
-        width: 100%;
-        z-index: 1;
-      }
+      #waste-map { height: 440px; width: 100%; z-index: 1; }
+      .leaflet-container { background: #0f172a; font: inherit; }
+      .menu-backdrop { visibility: hidden; opacity: 0; transition: opacity .28s ease, visibility .28s ease; }
+      .menu-backdrop.is-open { visibility: visible; opacity: 1; }
+      .slide-menu { transform: translateX(105%); transition: transform .38s cubic-bezier(.22,.8,.25,1); }
+      .slide-menu.is-open { transform: translateX(0); }
+      .menu-link { display: flex; align-items: center; gap: 14px; border-radius: 10px; padding: 14px; color: #cbd5e1; font-size: 15px; transition: background .2s, color .2s; }
+      .menu-link:hover, .menu-link:focus { background: #1e293b; color: #6ee7b7; outline: none; }
+      .menu-arrow { margin-left: auto; color: #34d399; }
+      @media (prefers-reduced-motion: reduce) { .menu-backdrop, .slide-menu { transition-duration: .01ms; } }
     </style>
   </head>
   <body class="min-h-screen bg-slate-950 font-sans text-slate-100 antialiased">
-    <!-- HEADER AVEC NAVIGATION -->
-    <header
-      class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 bg-slate-900 px-6 py-4 shadow-md"
-    >
-      <div class="flex items-center gap-3">
-        <span
-          class="rounded bg-emerald-600 px-2.5 py-1 text-sm font-bold text-white"
-          >DI</span
-        >
-        <h1 class="text-xl font-bold tracking-tight text-white">
-          PlanetCred
-          <span class="font-normal text-amber-400"
-            >Waste & Thermal Hotspots</span
-          >
-        </h1>
+    <header class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 bg-slate-900 px-6 py-4 shadow-md">
+      <button id="menu-open" type="button" data-i18n="nav.menu" data-i18n-aria="nav.open" aria-label="Open navigation menu" aria-expanded="false" aria-controls="slide-menu" class="order-first rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white transition hover:border-emerald-500">Menu</button>
+      <a href="index.html" class="flex items-center gap-3 font-bold text-white">
+        <span class="rounded bg-emerald-600 px-2.5 py-1 text-sm">DI</span>
+        <span>PlanetCred <span class="font-normal text-amber-400" data-i18n="projects.wasteManagement">Waste Management</span></span>
+      </a>
+      <div class="flex items-center gap-3 text-xs">
+        <span class="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-slate-300">NASA Space Apps 2026</span>
+        <span class="rounded-full border border-emerald-800 bg-emerald-950 px-3 py-1 font-medium text-emerald-400" data-i18n="nav.systemReady">● System Ready</span>
       </div>
-      <nav class="flex gap-2">
-        <a
-          href="index.html"
-          class="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-slate-700"
-        >
-          🌲 Reforestation (NDVI)
-        </a>
-        <a
-          href="waste.html"
-          class="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white shadow"
-        >
-          ♻️ Waste & Heat Hotspots
-        </a>
-      </nav>
     </header>
 
-    <main class="mx-auto max-w-7xl space-y-6 p-6">
-      <!-- 1. BARRE DE RECHERCHE PAR PAYS / VILLE -->
-      <div
-        class="rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-lg"
-      >
+    <div id="menu-backdrop" class="menu-backdrop fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm" aria-hidden="true"></div>
+    <nav id="slide-menu" class="slide-menu fixed right-0 top-0 z-50 flex h-full w-[min(88vw,380px)] flex-col border-l border-slate-700 bg-slate-900 p-6 shadow-2xl" aria-label="Navigation" data-i18n-aria="nav.title" aria-hidden="true" inert>
+      <div class="mb-8 flex items-center justify-between border-b border-slate-800 pb-5">
+        <div><p class="text-xs font-semibold uppercase tracking-[.2em] text-emerald-400">PlanetCred DI</p><h2 class="mt-1 text-xl font-bold text-white" data-i18n="nav.title">Navigation</h2></div>
+        <button id="menu-close" type="button" data-i18n-aria="nav.close" aria-label="Close navigation menu" class="rounded-lg border border-slate-700 p-2 text-slate-300 hover:bg-slate-800">×</button>
+      </div>
+      <div class="flex flex-col gap-2">
+        <a class="menu-link" href="index.html"><span aria-hidden="true">▦</span><span data-i18n="nav.dashboard">Dashboard</span><span class="menu-arrow">→</span></a>
+        <a class="menu-link" href="projects.html"><span aria-hidden="true">◈</span><span data-i18n="nav.projects">Projects</span><span class="menu-arrow">→</span></a>
+        <a class="menu-link" href="waste.html"><span aria-hidden="true">♻</span><span data-i18n="projects.wasteManagement">Waste Management</span><span class="menu-arrow">→</span></a>
+        <a class="menu-link" href="methodology.html"><span aria-hidden="true">◉</span><span data-i18n="nav.methodology">Methodology</span><span class="menu-arrow">→</span></a>
+        <a class="menu-link" href="about.html"><span aria-hidden="true">✦</span><span data-i18n="nav.about">About PlanetCred</span><span class="menu-arrow">→</span></a>
+      </div>
+      <p class="mt-auto border-t border-slate-800 pt-5 text-xs text-slate-500" data-i18n="nav.footer">Earth observation intelligence for verified climate action.</p>
+    </nav>
+
+    <main class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
+      <section class="rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-lg" aria-labelledby="waste-title">
+        <div class="mb-4">
+          <p class="text-xs font-semibold uppercase tracking-[.2em] text-amber-400" data-i18n="waste.kicker">Open registries · NASA Earth observations</p>
+          <h1 id="waste-title" class="mt-2 text-2xl font-bold text-white sm:text-3xl" data-i18n="waste.title">Waste Management & Climate Context</h1>
+          <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-400" data-i18n="waste.intro">Explore mapped waste facilities alongside regional climate records and satellite temperature imagery.</p>
+        </div>
         <form id="country-search-form" class="flex flex-col gap-3 sm:flex-row">
-          <div class="flex-1">
-            <label for="location-input" class="sr-only"
-              >Search Country or City</label
-            >
-            <input
-              type="text"
-              id="location-input"
-              value="Mauritius"
-              placeholder="Enter a country or city (e.g., Mauritius, Nigeria, Nairobi, Dakar)..."
-              class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm text-white placeholder-slate-400 focus:border-amber-500 focus:outline-none"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            id="btn-search-location"
-            class="rounded-lg bg-amber-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-500"
-          >
-            🔍 Scan NASA & Open Data
-          </button>
+          <label for="location-input" class="sr-only" data-i18n="waste.searchLabel">Search a country or city</label>
+          <input id="location-input" type="text" value="Mauritius" data-i18n-placeholder="waste.searchPlaceholder" placeholder="Enter a country or city" class="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm text-white placeholder-slate-400 focus:border-amber-500 focus:outline-none" required />
+          <button id="btn-search-location" type="submit" class="rounded-lg bg-amber-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-500" data-i18n="waste.searchButton">Scan NASA & Open Data</button>
         </form>
-        <p id="search-status" class="mt-2 text-xs text-slate-400">
-          Initializing global open waste registries and NASA thermal layers...
-        </p>
-      </div>
+        <p id="search-status" data-i18n="waste.loading" role="status" aria-live="polite" class="mt-3 text-xs text-slate-400">Loading location and climate data…</p>
+      </section>
 
-      <!-- 2. INDICATEURS CLÉS (KPIs) -->
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div class="rounded-xl border border-slate-800 bg-slate-900 p-4 shadow">
-          <p class="text-xs uppercase tracking-wider text-slate-400">
-            NASA Thermal & Climate Data
-          </p>
-          <p class="mt-1 text-lg font-bold text-white">
-            MODIS LST & NASA POWER
-          </p>
-          <p class="mt-1 text-xs text-slate-500">
-            Land Surface & Max Air Temp (2015–2026)
-          </p>
-        </div>
-        <div
-          class="rounded-xl border border-red-900/50 bg-slate-900 p-4 shadow"
-        >
-          <p class="text-xs uppercase tracking-wider text-slate-400">
-            Critical Heat & Waste Zones
-          </p>
-          <p id="kpi-red-count" class="mt-1 text-lg font-bold text-red-400">
-            -- Hotspots Detected
-          </p>
-          <p class="mt-1 text-xs text-slate-500">
-            Elevated Thermal Anomaly Detected
-          </p>
-        </div>
-        <div
-          class="rounded-xl border border-emerald-900/50 bg-slate-900 p-4 shadow"
-        >
-          <p class="text-xs uppercase tracking-wider text-slate-400">
-            Active Open Registry
-          </p>
-          <p
-            id="kpi-total-sites"
-            class="mt-1 text-lg font-bold text-emerald-400"
-          >
-            -- Monitored Sites
-          </p>
-          <p class="mt-1 text-xs text-slate-500">
-            Source: OpenStreetMap Overpass + NASA
-          </p>
-        </div>
-      </div>
+      <section class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="Regional indicators" data-i18n-aria="waste.indicators">
+        <article class="rounded-xl border border-slate-800 bg-slate-900 p-4 shadow">
+          <p class="text-xs uppercase tracking-wider text-slate-400" data-i18n="waste.kpiClimate">NASA POWER climate data</p>
+          <p class="mt-1 text-lg font-bold text-white" data-i18n="waste.dailyMax">Daily maximum air temperature</p>
+          <p id="climate-period" class="mt-1 text-xs text-slate-500">Annual mean · 2015 vs latest complete year</p>
+        </article>
+        <article class="rounded-xl border border-amber-900/50 bg-slate-900 p-4 shadow">
+          <p class="text-xs uppercase tracking-wider text-slate-400" data-i18n="waste.kpiRegistry">OpenStreetMap waste registry</p>
+          <p id="kpi-site-count" class="mt-1 text-lg font-bold text-amber-300">— sites mapped</p>
+          <p class="mt-1 text-xs text-slate-500" data-i18n="waste.osmNote">Facilities reported by OSM contributors</p>
+        </article>
+        <article class="rounded-xl border border-emerald-900/50 bg-slate-900 p-4 shadow">
+          <p class="text-xs uppercase tracking-wider text-slate-400" data-i18n="waste.kpiChange">Regional temperature change</p>
+          <p id="kpi-temperature-change" class="mt-1 text-lg font-bold text-emerald-300">— °C</p>
+          <p id="kpi-temperature-note" class="mt-1 text-xs text-slate-500">NASA POWER annual mean daily maximum air temperature</p>
+        </article>
+      </section>
 
-      <!-- 3. CARTE DES POINTS CHAUDS (ROUGE / JAUNE / VERT) -->
-      <div
-        class="rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-lg"
-      >
+      <section class="rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-lg" aria-labelledby="map-title">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 class="text-sm font-bold uppercase tracking-wide text-white">
-            Thermal Anomalies & Waste Concentration Map
-          </h2>
-          <div class="flex flex-wrap items-center gap-4 text-xs">
-            <span class="flex items-center gap-1.5"
-              ><span
-                class="inline-block h-3 w-3 rounded-full bg-red-500"
-              ></span>
-              Critical Hotspot (High Waste/Heat)</span
-            >
-            <span class="flex items-center gap-1.5"
-              ><span
-                class="inline-block h-3 w-3 rounded-full bg-yellow-400"
-              ></span>
-              Moderate Concentration</span
-            >
-            <span class="flex items-center gap-1.5"
-              ><span
-                class="inline-block h-3 w-3 rounded-full bg-emerald-500"
-              ></span>
-              Low / Controlled Zone</span
-            >
-          </div>
+          <h2 id="map-title" class="text-sm font-bold uppercase tracking-wide text-white" data-i18n="waste.mapTitle">Waste Facilities & NASA Thermal Layer</h2>
+          <p class="text-xs text-slate-400" data-i18n="waste.mapLegend">Amber markers: OSM waste locations · MODIS layer: regional land-surface temperature</p>
         </div>
         <div class="overflow-hidden rounded-lg border border-slate-800">
-          <div id="waste-map"></div>
+          <div id="waste-map" role="region" aria-label="Waste facility and satellite temperature map" data-i18n-aria="waste.mapAria"></div>
         </div>
-      </div>
+      </section>
 
-      <!-- 4. TABLEAU DE RECENSEMENT : ANCIEN VS ACTUEL -->
-      <div
-        class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-lg"
-      >
-        <h2 class="mb-4 text-sm font-bold uppercase tracking-wide text-white">
-          Waste & Thermal Registry — Historical (2015) vs Current (2025/2026)
-          Comparison
-        </h2>
+      <section class="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-lg" aria-labelledby="registry-title">
+        <h2 id="registry-title" class="mb-4 text-sm font-bold uppercase tracking-wide text-white" data-i18n="waste.tableTitle">Open Waste Facilities & Regional Climate Context</h2>
         <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead
-              class="border-b border-slate-800 bg-slate-950/60 uppercase text-slate-400"
-            >
+          <table class="w-full min-w-[850px] text-left text-xs text-slate-300">
+            <thead class="border-b border-slate-800 bg-slate-950/60 uppercase text-slate-400">
               <tr>
-                <th class="px-4 py-3">Site Name & Coordinates</th>
-                <th class="px-4 py-3">Concentration Status</th>
-                <th class="px-4 py-3">Data Source</th>
-                <th class="px-4 py-3">NASA Temp (2015)</th>
-                <th class="px-4 py-3">NASA Temp (Current)</th>
-                <th class="px-4 py-3">Thermal Shift</th>
+                <th class="px-4 py-3" data-i18n="waste.tableSite">Site name & coordinates</th>
+                <th class="px-4 py-3" data-i18n="waste.tableType">OSM feature type</th>
+                <th class="px-4 py-3" data-i18n="waste.tableSource">Registry source</th>
+                <th id="table-year-2015" class="px-4 py-3" data-i18n="waste.tableBaselineDefault">Regional mean T2M_MAX (2015)</th>
+                <th id="table-year-current" class="px-4 py-3" data-i18n="waste.tableLatestDefault">Regional mean T2M_MAX (latest year)</th>
+                <th class="px-4 py-3" data-i18n="waste.tableChange">Regional change</th>
               </tr>
             </thead>
             <tbody id="waste-table-body" class="divide-y divide-slate-800">
-              <!-- Rempli dynamiquement par waste.js -->
+              <tr><td colspan="6" class="px-4 py-5 text-slate-500" data-i18n="waste.loading">Loading location and climate data…</td></tr>
             </tbody>
           </table>
         </div>
-      </div>
-      <!-- MODULE AI INTELLIGENCE SUMMARY & EXPORT EXCEL -->
-      <div
-        class="rounded-xl border border-indigo-500/40 bg-slate-900 p-5 shadow-lg"
-      >
-        <div
-          class="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3"
-        >
-          <div class="flex items-center gap-2.5">
-            <span
-              class="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-sm"
-              >✨</span
-            >
-            <div>
-              <h2 class="text-sm font-bold uppercase tracking-wide text-white">
-                PlanetCred AI Intelligence Briefing
-              </h2>
-              <p class="text-[11px] text-indigo-300">
-                Automated synthesis of NASA thermal anomalies & open waste
-                registries
-              </p>
-            </div>
+      </section>
+
+      <section class="rounded-xl border border-indigo-500/40 bg-slate-900 p-5 shadow-lg" aria-labelledby="summary-title">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div>
+            <h2 id="summary-title" class="text-sm font-bold uppercase tracking-wide text-white" data-i18n="waste.summaryTitle">Automated Regional Summary</h2>
+            <p class="mt-1 text-[11px] text-indigo-300" data-i18n="waste.summarySubtitle">NASA POWER climate context and OpenStreetMap waste locations</p>
           </div>
-          <button
-            id="btn-export-excel"
-            type="button"
-            class="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow transition hover:bg-emerald-500"
-          >
-            📊 Export Report (.xlsx)
-          </button>
+          <button id="btn-export-excel" type="button" class="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow transition hover:bg-emerald-500" data-i18n="waste.export">Export report (.xlsx)</button>
         </div>
-
-        <!-- Zone où l'IA rédige automatiquement le résumé analytique -->
-        <div
-          id="ai-summary-content"
-          class="space-y-3 text-xs leading-relaxed text-slate-300"
-        >
-          <p class="italic text-slate-500">
-            Analyzing satellite and ground data to generate executive summary...
-          </p>
+        <div id="ai-summary-content" class="space-y-3 text-xs leading-relaxed text-slate-300">
+          <p class="italic text-slate-500" data-i18n="waste.loading">Loading location and climate data…</p>
         </div>
-      </div>
+      </section>
 
-      <!-- 5. LIMITES SCIENTIFIQUES -->
-      <div
-        class="rounded-xl border border-amber-800/40 bg-amber-950/20 p-4 text-xs text-amber-200/80"
-      >
-        <strong class="mb-1 block uppercase text-amber-400"
-          >⚠ Scientific Interpretation & Limitations</strong
-        >
-        Open waste infrastructure locations are retrieved from OpenStreetMap
-        community registries and cross-referenced with NASA MODIS Land Surface
-        Temperature (GIBS) and NASA POWER meteorological archives. Surface heat
-        anomalies corroborate landfill and urban waste activity but are also
-        influenced by local land cover and seasonal weather.
-      </div>
+      <aside class="rounded-xl border border-amber-800/40 bg-amber-950/20 p-4 text-xs leading-5 text-amber-100/80">
+        <strong class="mb-1 block uppercase text-amber-400" data-i18n="waste.limitTitle">Scientific interpretation & limitations</strong>
+        <span data-i18n="waste.limitText">Waste locations come from OpenStreetMap. NASA POWER values are regional annual means of daily maximum air temperature, not measurements at each facility. The MODIS land-surface temperature layer is a satellite visualization and should not be interpreted as a facility-level reading or proof that waste caused local heating.</span>
+      </aside>
     </main>
 
-    <script src="https://unpkg.com"></script>
-    <!-- Bibliothèque SheetJS pour générer de vrais fichiers Excel (.xlsx) -->
-    <script src="https://sheetjs.com"></script>
-    <script src="waste.js"></script>
-
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="waste.js"></script>
     <script src="i18n.js"></script>
   </body>
