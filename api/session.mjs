@@ -1,4 +1,4 @@
-import { readSession, sendJSON } from "./_lib/auth.mjs";
+import { readSession, sendJSON } from "../server/auth.mjs";
 
 export default function handler(request, response) {
   if (request.method !== "GET") {

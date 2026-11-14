@@ -6,7 +6,7 @@ import {
   requestIsSameOrigin,
   sendJSON,
   sessionCookie,
-} from "./_lib/auth.mjs";
+} from "../server/auth.mjs";
 
 const failedAttempts = new Map();
 

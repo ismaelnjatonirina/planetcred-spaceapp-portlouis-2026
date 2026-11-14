@@ -5,7 +5,7 @@ import {
   requestIsSameOrigin,
   sendJSON,
   sessionCookie,
-} from "./_lib/auth.mjs";
+} from "../server/auth.mjs";
 
 export default async function handler(request, response) {
   if (request.method !== "POST") {
