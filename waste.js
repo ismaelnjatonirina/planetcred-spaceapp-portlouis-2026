@@ -166,6 +166,18 @@ function getFacilityTypeKey(tags) {
 
 async function loadWasteFacilities(bounds) {
   const box = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
+  const proxyUrl = `/api/waste-facilities?bbox=${encodeURIComponent(box)}`;
+  try {
+    const proxied = await fetchJSON(proxyUrl, {
+      headers: { Accept: "application/json" },
+    });
+    if (!Array.isArray(proxied.elements)) throw new Error("Invalid facility proxy response");
+    return mapWasteElements(proxied.elements);
+  } catch (proxyError) {
+    const isLocalDevelopment = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+    if (!isLocalDevelopment) throw proxyError;
+  }
+
   const query = `
     [out:json][timeout:20];
     (
@@ -212,7 +224,11 @@ async function loadWasteFacilities(bounds) {
   if (!result) {
     throw new Error(`All OpenStreetMap Overpass endpoints failed (${failures.join("; ")})`);
   }
-  return (result.elements || [])
+  return mapWasteElements(result.elements);
+}
+
+function mapWasteElements(elements) {
+  return elements
     .map((element) => {
       const lat = Number(element.lat ?? element.center?.lat);
       const lon = Number(element.lon ?? element.center?.lon);
