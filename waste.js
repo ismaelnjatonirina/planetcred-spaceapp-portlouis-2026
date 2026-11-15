@@ -3,6 +3,10 @@ const BASELINE_YEAR = 2015;
 const CURRENT_YEAR = new Date().getUTCFullYear() - 1;
 const POWER_START = `${BASELINE_YEAR}0101`;
 const POWER_END = `${CURRENT_YEAR}1231`;
+const OVERPASS_ENDPOINTS = [
+  "https://overpass.private.coffee/api/interpreter",
+  "https://overpass-api.de/api/interpreter",
+];
 const tr = (key, values) => (window.t ? window.t(key, values) : key);
 
 function waitForInitialTiles(layer) {
@@ -163,7 +167,7 @@ function getFacilityTypeKey(tags) {
 async function loadWasteFacilities(bounds) {
   const box = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
   const query = `
-    [out:json][timeout:25];
+    [out:json][timeout:20];
     (
       node["landuse"="landfill"](${box});
       way["landuse"="landfill"](${box});
@@ -174,14 +178,40 @@ async function loadWasteFacilities(bounds) {
       way["amenity"="waste_disposal"](${box});
       node["recycling"="centre"](${box});
     );
-    out center 100;
+    out center 50;
   `;
   const body = new URLSearchParams({ data: query });
-  const result = await fetchJSON("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-    body,
-  });
+  const failures = [];
+  let result = null;
+
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
+    try {
+      result = await fetchJSON(endpoint, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        },
+        body,
+        signal: controller.signal,
+      });
+      if (!Array.isArray(result.elements)) {
+        throw new Error("Overpass returned an invalid response");
+      }
+      break;
+    } catch (error) {
+      failures.push(`${new URL(endpoint).hostname}: ${error.name === "AbortError" ? "timeout" : error.message}`);
+      result = null;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  if (!result) {
+    throw new Error(`All OpenStreetMap Overpass endpoints failed (${failures.join("; ")})`);
+  }
   return (result.elements || [])
     .map((element) => {
       const lat = Number(element.lat ?? element.center?.lat);
