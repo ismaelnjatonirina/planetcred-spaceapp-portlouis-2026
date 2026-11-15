@@ -9,10 +9,6 @@
     "build": "tailwindcss -i ./src/input.css -o ./assets/app.css --minify && node ./scripts/build.mjs",
     "start": "node server.js"
   },
-  "dependencies": {
-    "@neondatabase/serverless": "^1.0.2",
-    "@vercel/functions": "^2.2.0"
-  },
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.0",
     "tailwindcss": "^4.3.0"

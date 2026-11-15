@@ -3,10 +3,6 @@
   "framework": null,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "proxy": {
-    "entrypoint": "middleware.js",
-    "matcher": ["/", "/index.html", "/projects.html", "/waste.html", "/methodology.html", "/about.html", "/data/:path*"]
-  },
   "headers": [
     {
       "source": "/assets/(.*)",
